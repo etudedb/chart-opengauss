@@ -1,0 +1,405 @@
+# Default values for opengauss.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+commonAnnotations: {}
+
+image:
+  repository: opengauss/opengauss
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "3.1.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+## Specify password for gaussdb user#
+## Default: random 10 character string
+RootPassword: Gauss@123
+
+customLivenessProbe: {}
+customReadinessProbe: {}
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 60
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 60
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+## Persist data to a persistent volume
+persistence:
+  enabled: true
+  ## database data Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  storageClass: ""
+  existingClaim: ""
+  accessMode: ReadWriteOnce
+  size: 4Gi
+  annotations: {}
+  labels: {}
+  selector: {}
+  dataSource: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 5432
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: 
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 100m
+    memory: 1024Mi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+metrics:
+  ## @param metrics.enabled Enable using a sidecar Prometheus exporter
+  ##
+  enabled: false
+  ## Bitnami opengauss(&reg;) Promtheus Exporter image
+  ## ref: https://hub.docker.com/r/bitnami/opengauss-exporter/tags/
+  ## @param metrics.image.registry opengauss(&reg;) Prometheus exporter image registry
+  ## @param metrics.image.repository opengauss(&reg;) Prometheus exporter image repository
+  ## @param metrics.image.tag opengauss(&reg;) Prometheus exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.digest opengauss(&reg;) image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param metrics.image.pullPolicy opengauss(&reg;) Prometheus exporter image pull policy
+  ## @param metrics.image.pullSecrets Specify docker-registry secret names as an array
+  ##
+  image:
+    # registry: docker.io
+    repository: enmotech/opengauss_exporter
+    tag: v0.0.6
+    digest: ""
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+  SecurityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsNonRoot: true
+
+  ## @param metrics.username String with username for the metrics exporter
+  ## If undefined the root user will be used for the metrics exporter
+  ##
+  username: ""
+  ## @param metrics.password String with password for the metrics exporter
+  ## If undefined but metrics.username is defined, a random password will be generated
+  ##
+  password: ""
+  ## @param metrics.compatibleMode Enables old style opengauss-exporter metrics
+  compatibleMode: true
+
+  collector:
+    ## @param metrics.collector.all Enable all collectors. Same as enabling all individual metrics
+    ## Enabling all metrics will cause significant CPU load on mongod
+    all: false
+    ## @param metrics.collector.diagnosticdata Boolean Enable collecting metrics from getDiagnosticData
+    diagnosticdata: true
+    ## @param metrics.collector.replicasetstatus Boolean Enable collecting metrics from replSetGetStatus
+    replicasetstatus: true
+    ## @param metrics.collector.dbstats Boolean Enable collecting metrics from dbStats
+    dbstats: false
+    ## @param metrics.collector.topmetrics Boolean Enable collecting metrics from top admin command
+    topmetrics: false
+    ## @param metrics.collector.indexstats Boolean Enable collecting metrics from $indexStats
+    indexstats: false
+    ## @param metrics.collector.collstats Boolean Enable collecting metrics from $collStats
+    collstats: false
+    ## @param metrics.collector.collstatsColls List of \<databases\>.\<collections\> to get $collStats
+    collstatsColls: []
+    ## @param metrics.collector.indexstatsColls List - List of \<databases\>.\<collections\> to get $indexStats
+    indexstatsColls: []
+    ## @param metrics.collector.collstatsLimit Number - Disable collstats, dbstats, topmetrics and indexstats collector if there are more than \<n\> collections. 0=No limit
+    collstatsLimit: 0
+
+  ## @param metrics.extraFlags String with extra flags to the metrics exporter
+  ## ref: https://github.com/percona/opengauss_exporter/blob/main/main.go
+  ##
+  extraFlags: ""
+  ## Command and args for running the container (set to default if not set). Use array form
+  ## @param metrics.command Override default container command (useful when using custom images)
+  ## @param metrics.args Override default container args (useful when using custom images)
+  ##
+  command: []
+  args: []
+  ## Metrics exporter container resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## @param metrics.resources.limits The resources limits for Prometheus exporter containers
+  ## @param metrics.resources.requests The requested resources for Prometheus exporter containers
+  ##
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 100m
+    ##    memory: 128Mi
+    ##
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    cpu: 100m
+    ##    memory: 128Mi
+    ##
+    requests: {}
+  ## @param metrics.containerPort Port of the Prometheus metrics container
+  ##
+  containerPort: 9187
+  ## Prometheus Exporter service configuration
+  ##
+  service:
+    ## @param metrics.service.annotations [object] Annotations for Prometheus Exporter pods. Evaluated as a template.
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    ##
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "{{ .Values.metrics.service.ports.metrics }}"
+      prometheus.io/path: "/metrics"
+    ## @param metrics.service.type Type of the Prometheus metrics service
+    ##
+    type: ClusterIP
+    ## @param metrics.service.ports.metrics Port of the Prometheus metrics service
+    ##
+    ports:
+      metrics: 9187
+    ## @param metrics.service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+    ##
+    extraPorts: []
+  ## Metrics exporter liveness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
+  ## @param metrics.livenessProbe.enabled Enable livenessProbe
+  ## @param metrics.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param metrics.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param metrics.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param metrics.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param metrics.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 60
+    timeoutSeconds: 15
+    failureThreshold: 3
+    successThreshold: 1
+  ## Metrics exporter readiness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
+  ## @param metrics.readinessProbe.enabled Enable readinessProbe
+  ## @param metrics.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param metrics.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param metrics.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param metrics.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param metrics.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 60
+    timeoutSeconds: 15
+    failureThreshold: 3
+    successThreshold: 1
+  ## Slow starting containers can be protected through startup probes
+  ## Startup probes are available in Kubernetes version 1.16 and above
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
+  ## @param metrics.startupProbe.enabled Enable startupProbe
+  ## @param metrics.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param metrics.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param metrics.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param metrics.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param metrics.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 10
+    periodSeconds: 60
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 30
+  ## @param metrics.customLivenessProbe Override default liveness probe for opengauss(&reg;) containers
+  ## Ignored when livenessProbe.enabled=true
+  ##
+  customLivenessProbe: {}
+  ## @param metrics.customReadinessProbe Override default readiness probe for opengauss(&reg;) containers
+  ## Ignored when readinessProbe.enabled=true
+  ##
+  customReadinessProbe: {}
+  ## @param metrics.customStartupProbe Override default startup probe for opengauss(&reg;) containers
+  ## Ignored when startupProbe.enabled=true
+  ##
+  customStartupProbe: {}
+  ## @param metrics.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the metrics container(s)
+  ## Examples:
+  ## extraVolumeMounts:
+  ##   - name: extras
+  ##     mountPath: /usr/share/extras
+  ##     readOnly: true
+  ##
+  extraVolumeMounts: []
+  ## Prometheus Service Monitor
+  ## ref: https://github.com/coreos/prometheus-operator
+  ##      https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace which Prometheus is running in
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped
+    ##
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
+    ## e.g:
+    ## scrapeTimeout: 30s
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping.
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricsRelabelConfigs to apply to samples before ingestion.
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.labels Used to pass Labels that are used by the Prometheus installed in your cluster to select Service Monitors to work with
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+    ##
+    labels: {}
+    ## @param metrics.serviceMonitor.selector Prometheus instance selector labels
+    ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.honorLabels Specify honorLabels parameter to add the scrape endpoint
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+  ## Custom PrometheusRule to be defined
+  ## ref: https://github.com/coreos/prometheus-operator#customresourcedefinitions
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled Set this to true to create prometheusRules for Prometheus operator
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.additionalLabels Additional labels that can be used so prometheusRules will be discovered by Prometheus
+    ##
+    additionalLabels: {}
+    ## @param metrics.prometheusRule.namespace Namespace where prometheusRules resource should be created
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.rules Rules to be created, check values for an example
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#rulegroup
+    ##      https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+    ##
+    ## This is an example of a rule, you should add the below code block under the "rules" param, removing the brackets
+    ## rules:
+    ## - alert: HighRequestLatency
+    ##   expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    ##   for: 10m
+    ##   labels:
+    ##     severity: page
+    ##   annotations:
+    ##     summary: High request latency
+    ##
+    rules: []
+
+backup:
+  enabled: false
+  image: "harbor.chinaetek.com/public/etude-backup:1.0.0-snapshot"
+  schedule:
+    cron: "40 2 * * *"
+  databases: 
+    opengauss: 
+      type: opengauss
+      host: ""
+      port: 5432
+      database: ""
+      username: ""
+      password: ""
+  storages:
+    type: s3
+    path: ""
+    access_key_id: ""
+    secret_access_key: ""
+    endpoint: ""
+    bucket: ""

@@ -1,0 +1,39 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-etude-backup
+spec:
+  schedule: {{.Values.backup.schedule.cron}}
+  concurrencyPolicy: Allow
+  suspend: false
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: gobackup
+            # env:
+            # - name: MONGODB_ROOT_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ include "mongodb.secretName" . }}
+            #       key: mongodb-root-password
+            image: {{.Values.backup.image}}
+            imagePullPolicy: Always
+            command: ["gobackup", "perform"]
+            volumeMounts:
+              - mountPath: /root/.gobackup    #挂载到那个目录
+                name: "{{ .Release.Name }}-etude-backup"  #存储卷的名称
+          volumes:
+            - name: {{ .Release.Name }}-etude-backup
+              configMap:
+                name: {{ .Release.Name }}-etude-backup
+                items:
+                  - key: gobackup.yml
+                    path: gobackup.yml
+                defaultMode: 420
+          restartPolicy: OnFailure
+{{- end }}
