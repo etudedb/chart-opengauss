@@ -23,6 +23,8 @@ RootPassword: Gauss@123
 customLivenessProbe: {}
 customReadinessProbe: {}
 
+clusterDomain: cluster.local
+
 livenessProbe:
   enabled: true
   initialDelaySeconds: 30
@@ -385,17 +387,17 @@ metrics:
 
 backup:
   enabled: false
-  image: "harbor.chinaetek.com/public/etude-backup:1.0.0-snapshot"
+  # image: "harbor.chinaetek.com/public/etude-backup:1.0.0-snapshot"
   schedule:
     cron: "40 2 * * *"
-  databases: 
-    opengauss: 
-      type: opengauss
-      host: ""
-      port: 5432
-      database: ""
-      username: ""
-      password: ""
+  # databases: 
+  #   opengauss: 
+  #     type: opengauss
+  #     host: ""
+  #     port: 5432
+  #     database: ""
+  #     username: ""
+  #     password: ""
   storages:
     type: s3
     path: ""

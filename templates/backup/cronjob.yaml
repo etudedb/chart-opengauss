@@ -13,27 +13,52 @@ spec:
     spec:
       template:
         spec:
-          containers:
-          - name: gobackup
-            # env:
-            # - name: MONGODB_ROOT_PASSWORD
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: {{ include "mongodb.secretName" . }}
-            #       key: mongodb-root-password
-            image: {{.Values.backup.image}}
-            imagePullPolicy: Always
-            command: ["gobackup", "perform"]
+          initContainers:
+          - name: backup
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
             volumeMounts:
-              - mountPath: /root/.gobackup    #挂载到那个目录
-                name: "{{ .Release.Name }}-etude-backup"  #存储卷的名称
+              - name: backup
+                mountPath: /backup
+            env:
+            - name: GS_PASSWORD
+              value: {{ .Values.RootPassword }}
+            - name: LD_LIBRARY_PATH
+              value: "$LD_LIBRARY_PATH:/usr/local/opengauss/lib"
+            ports:
+              - name: http
+                containerPort: {{ .Values.service.port }}
+                protocol: TCP
+            command:
+                - /bin/sh
+                - -c
+                - -e
+                - exec /usr/local/opengauss/bin/gs_dumpall -h opengauss.opengauss.svc.cluster.local -U gaussdb -W $GS_PASSWORD -p 5432 -f /backup/backup.sql
+          containers:
+          - name: arch
+            image: "amazon/aws-cli:latest"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            volumeMounts:
+              - name: backup
+                mountPath: /backup
+            env:
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.backup.storages.secret_access_key }}"
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.backup.storages.access_key_id }}"
+            ports:
+              - name: http
+                containerPort: {{ .Values.service.port }}
+                protocol: TCP
+            command:
+                - /bin/sh
+                - -c
+                - -e
+                - exec aws s3 cp /backup/backup.sql s3://{{ .Values.backup.storages.bucket }}/{{ .Values.backup.storages.path }}/backup.sql --endpoint-url http://{{ .Values.backup.storages.endpoint }}
           volumes:
-            - name: {{ .Release.Name }}-etude-backup
-              configMap:
-                name: {{ .Release.Name }}-etude-backup
-                items:
-                  - key: gobackup.yml
-                    path: gobackup.yml
-                defaultMode: 420
+            - name: backup
+              emptyDir: {}
+              # persistentVolumeClaim:
+              #   claimName: yishu-app-sit-pvc
           restartPolicy: OnFailure
 {{- end }}
